@@ -68,6 +68,7 @@ class TuyaLan {
     constructor(...props) {
         [this.log, this.config, this.api] = [...props];
 
+        this.accessories = [];
         this.cachedAccessories = new Map();
         this.api.hap.EnergyCharacteristics = require('./lib/EnergyCharacteristics')(this.api.hap.Characteristic);
 
@@ -79,8 +80,32 @@ class TuyaLan {
         this._expectedUUIDs = this.config.devices.map(device => UUID.generate(PLUGIN_NAME +(device.fake ? ':fake:' : ':') + device.id));
 
         this.api.on('didFinishLaunching', () => {
+            this.log('Received finish launching signal')
+            this.log('Current list of accessories:')
+            console.log(this.accessories)
+            this.log('Current cache map:')
+            console.log(this.cachedAccessories)
+            this.convertCacheToMap();
+            this.log('Current cache map after convert:')
+            console.log(this.cachedAccessories)
             this.discoverDevices();
         });
+    }
+
+    convertCacheToMap() {
+      this.log("Converting cache to map")
+      for (const accessory in this.accessories) {
+        this.cachedAccessories[accessory.UUID] = accessory
+      }
+    }
+
+    convertCacheToList() {
+      this.log("Converting cache to list")
+      for (const key in this.cachedAccessories) {
+        if (dict.hasOwnProperty(key)) {
+          this.accessories.push(this.cachedAccessories[key])
+        }
+      }
     }
 
     discoverDevices() {
@@ -180,6 +205,7 @@ class TuyaLan {
                     return true;
                 });
             });
+            this.convertCacheToList();
         } else {
             /*
              * Irrespective of this unregistering, Homebridge continues
@@ -218,6 +244,7 @@ class TuyaLan {
         }
 
         this.cachedAccessories.set(deviceConfig.UUID, new Accessory(this, accessory, device, !isCached));
+        this.convertCacheToList();
     }
 
     removeAccessory(homebridgeAccessory) {
